@@ -110,6 +110,8 @@ if sys.version_info.major == 2:
 
     def signature(func):
         return inspect.formatargspec(*inspect.getargspec(func))
+
+    range = xrange
 else:
     def func_code(func):
         return func.__code__
@@ -252,14 +254,14 @@ class FunctionSource(object):
         part = self.parts[-1]
         # find where the spaces should start
         snd = len(part)
-        for i in xrange(snd - 1, -1, -1):
+        for i in range(snd - 1, -1, -1):
             if part[i] == ')' or part[i] == "'":
                 snd -= 1
             else:
                 break
         # count the number of spaces
         sp = 0
-        for i in xrange(snd - 1, -1, -1):
+        for i in range(snd - 1, -1, -1):
             if part[i] == ' ' or part[i] == '\t':
                 sp += 1
             else:
