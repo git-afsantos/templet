@@ -287,8 +287,8 @@ def main():
         print(cmd)
         if os.system(cmd):
             sys.exit(1)
-    #for src in ('templet.py', 'test_templet.py'):
-    #    run('env/bin/flake8 --ignore E701 ' + src)
+    for src in ('templet.py', 'test_templet.py'):
+        run('env/bin/flake8 --ignore E701 ' + src)
     for python in (
             'python2',
             'python3',
