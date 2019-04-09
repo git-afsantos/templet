@@ -47,6 +47,7 @@ There are just six constructs that are supported, all starting with $:
 | `${...}` |  evaluates the expression and inserts the result |
 | `${[...]}` |  runs a list comprehension and concatenates the results |
 | `${{...}}` | executes enclosed code; use `out.append(text)` to insert text |
+| `${{!...}}` | same as above, but `out.append(line)` retains relative indentation |
 | `$$` | an escape for a single `$` |
 | `$` | (at the end of the line) is a line continuation |
 
@@ -127,6 +128,22 @@ def indented(x):
       var val
       x   $x
    """
+```
+
+If each of the lines that has leading spaces must be dynamically generated, you can use an indented code block, as follows:
+
+```
+@templet
+def code_generator(name, attributes):
+    """\
+    class My${name}(object):
+        def __init__(self):
+            ${{!
+                for name, value in attributes.iteritems():
+                    line = "self.{} = {}".format(name, value)
+                    out.append(line)
+            }}
+    """
 ```
 
 One question is whether the opening `"""` should be on the same line as the def or its own line. For clarity I usually put the opening quote on its own line, but to get columns to line up correctly, I eat the newline with a python line continuation immediately `"""\`.

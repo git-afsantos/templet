@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
     name='python_templet',
-    version='4.0.0',
+    version='4.1.0',
     description='Lightweight string templating via function decorator.',
     long_description=open('README.md', 'r').read(),
     author='David Bau',
