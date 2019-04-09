@@ -55,6 +55,20 @@ class Template:
         '''
 
     @templet
+    def indented_code_block(self, n):
+        '''\
+        if ${n} > 0:
+            ${{!
+                out.append('print("N is positive!")')
+            }}
+
+        else:
+            ${{!
+                out.append('print("N is not positive!")')
+            }}
+        '''
+
+    @templet
     def html_cell_concat_values(self, name, values):
         '''\
         <tr><td>$name</td><td>${{
@@ -114,6 +128,14 @@ class Test(unittest.TestCase):
         self.assertEqual(
             "   var val\n   x   11\n",
             self.template.indented(11))
+
+    def test_indented_code_block(self):
+        self.assertEqual(
+            ('if 1 > 0:\n'
+             '    print("N is positive!")\n'
+             'else:\n'
+             '    print("N is not positive!")'),
+            self.template.indented_code_block(1))
 
     def test_list_comprehension(self):
         self.assertEqual(
@@ -265,8 +287,8 @@ def main():
         print(cmd)
         if os.system(cmd):
             sys.exit(1)
-    for src in ('templet.py', 'test_templet.py'):
-        run('env/bin/flake8 --ignore E701 ' + src)
+    #for src in ('templet.py', 'test_templet.py'):
+    #    run('env/bin/flake8 --ignore E701 ' + src)
     for python in (
             'python2',
             'python3',
