@@ -1,7 +1,7 @@
 # coding: utf-8
 """
 A lightweight python templating engine.
-Templet version 4.0
+Templet version 4.1
 
 Each template function is marked with the decorator @templet.
 Template functions will be rewritten to expand their document
@@ -18,10 +18,11 @@ For example:
 
 The template language understands the following forms:
 
-    $var     - inserts the value of the variable 'var'
-    ${...}   - evaluates the expression and inserts the result
-    ${[...]} - evaluates the list comprehension and inserts all the results
-    ${{...}} - executes enclosed code; use 'out.append(text)' to insert text
+    $var      - inserts the value of the variable 'var'
+    ${...}    - evaluates the expression and inserts the result
+    ${[...]}  - evaluates the list comprehension and inserts all the results
+    ${{...}}  - executes enclosed code; use 'out.append(text)' to insert text
+    ${{!...}} - same as above, but 'out.append' retains relative indentation
 
 In addition the following special codes are recognized:
 
@@ -51,7 +52,8 @@ accurately as possible.
 Templet is by David Bau and was inspired by Tomer Filiba's Templite class.
 For details, see http://davidbau.com/templet
 
-Modifications for 4.0 is by Krisztián Fekete.
+Modifications for 4.0 by KrisztiĂˇn Fekete.
+Modifications for 4.1 by André Santos.
 
 ----
 
@@ -155,6 +157,9 @@ def compile_doc(func):
                     'Unescaped $ in %s, line %d' % (filename, source.lineno))
             elif part == '$':
                 source.add(CONSTANT('$'))
+            elif part.startswith('{{!'):
+                source.trim_last()
+                source.add(CODE_BLOCK(part[3:-2]), simple=False)
             elif part.startswith('{{'):
                 source.add(CODE_BLOCK(part[2:-2]), simple=False)
             elif part.startswith('{['):
@@ -177,7 +182,7 @@ RE_DIRECTIVE = re.compile(
           [_a-z][_a-z0-9]*            | # $simple Python identifier
           [{]    (?![[{])[^}]*    [}] | # ${...} expression to eval
           [{][[] .*?           []][}] | # ${[...]} list comprehension to eval
-          [{][{] .*?           [}][}] | # ${{...}} multiline code to exec
+          [{][{][!]? .*?       [}][}] | # ${{...}} multiline code to exec
         )
         (
           (?<=[}][}])                   # after }}
@@ -213,7 +218,8 @@ EVAL = ' out.append("".__class__({}))'.format
 FINISH = ' return "".join(out)'
 
 
-class FunctionSource:
+class FunctionSource(object):
+    _out_append = re.compile(r'(\Wout.append[(])(.)')
 
     def __init__(self, func, lineno):
         self.parts = [
@@ -223,6 +229,7 @@ class FunctionSource:
         self.extralines = max(0, lineno - 1)
         self.simple = True
         self.lineno = lineno
+        self.indent = None
 
     def skip_lines(self, lines):
         self.lineno += lines
@@ -232,10 +239,47 @@ class FunctionSource:
         if offset <= 0 and simple and self.simple:
             self.parts[-1] += ';' + line
         else:
+            if not self.indent is None:
+                line = self._out_append.sub(self._indent_repl, line)
+                self.indent = None
             self.parts.append('\n' * (offset - 1) + line)
             self.extralines += max(0, offset - 1)
         self.extralines += line.count('\n')
         self.simple = simple
+
+    def trim_last(self):
+        # this part will be something like: out.append(u'...\n    ')
+        part = self.parts[-1]
+        # find where the spaces should start
+        snd = len(part)
+        for i in xrange(snd - 1, -1, -1):
+            if part[i] == ')' or part[i] == "'":
+                snd -= 1
+            else:
+                break
+        # count the number of spaces
+        sp = 0
+        for i in xrange(snd - 1, -1, -1):
+            if part[i] == ' ' or part[i] == '\t':
+                sp += 1
+            else:
+                break
+        fst = snd - sp
+        # trim the last '\n' if there is one
+        if part[fst - 2] == '\\' and part[fst - 1] == 'n':
+            fst -= 2
+        new_part = part[:fst] + part[snd:]
+        if new_part[-3] == "'" and new_part[-2] == "'":
+            # remove this part if there is nothing left
+            del self.parts[-1]
+        else:
+            self.parts[-1] = new_part
+        self.indent = sp
+        return sp
+
+    def _indent_repl(self, matchobj):
+        repl = r'"\n' + (' ' * self.indent) + '" + '
+        return matchobj.group(1) + repl + matchobj.group(2)
 
     @property
     def code(self):
